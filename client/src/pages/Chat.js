@@ -4,20 +4,29 @@ import '../assets/styles/Chat.css'
 function Chat() {
   const [messages, setMessages] = useState([]);
 
-  const addMessage = (message) => {
-    setMessages([...messages, message]);
+  const addUserMessage = (message) => {
+    setMessages([{
+      message: message,
+      isMine: true
+    }, ...messages]);
+  };
+
+  const addBotMessage = (message) => {
+    setMessages([{
+      message: message,
+      isMine: false
+    }, ...messages]);
   };
 
   return (
     <div className="chat-container">
       <div className="messages">
-        {messages.map((msg, index) => (
-          <div key={index} className="message">
-            {msg}
-          </div>
-        ))}
+        {messages.map((msg, index) => {
+          let className = msg.isMine ? 'message-mine' : 'message-bot';
+          return (<div key={index} className={className}>{msg.message}</div>)
+        })}
       </div>
-      <ChatInput addMessage={addMessage} />
+      <ChatInput addMessage={addUserMessage} />
     </div>
   );
 }
