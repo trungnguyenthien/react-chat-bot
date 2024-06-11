@@ -100,7 +100,7 @@ async function getPullRequestDetails(owner, repo, pullNumber) {
       pull_number: pullNumber,
     });
 
-    let response = {}
+    let response = {};
 
     // Lấy các commit của pull request
     const { data: commits } = await octokit.pulls.listCommits({
@@ -109,32 +109,24 @@ async function getPullRequestDetails(owner, repo, pullNumber) {
       pull_number: pullNumber,
     });
 
-    response.title = pullRequest.title
-    response.description = pullRequest.body
-    response.state = pullRequest.state
-    response.created_at = pullRequest.created_at
-    response.closed_at = pullRequest.closed_at
-    response.merged_at = pullRequest.merged_at
-    response.base_branch = pullRequest.base.ref
-    response.head_branch = pullRequest.head.ref
-    response.assignee = pullRequest.assignee ? pullRequest.assignee.login : 'None'
-    response.milestone = pullRequest.milestone ? pullRequest.milestone.title : 'None'
-    
+    // Tổng số dòng code thêm và xóa của pull request
+    const additions = pullRequest.additions;
+    const deletions = pullRequest.deletions;
 
-    // Hiển thị thông tin cơ bản về pull request
-    // console.log(`Title: ${pullRequest.title}`);
-    // console.log(`State: ${pullRequest.state}`);
-    // console.log(`Created at: ${pullRequest.created_at}`);
-    // console.log(`Closed at: ${pullRequest.closed_at}`);
-    // console.log(`Merged at: ${pullRequest.merged_at}`);
-    // console.log(`Base branch: ${pullRequest.base.ref}`);
-    // console.log(`Head branch: ${pullRequest.head.ref}`);
-    // console.log(`Assignee: ${pullRequest.assignee ? pullRequest.assignee.login : 'None'}`);
-    // console.log(`Labels: ${pullRequest.labels.map(label => label.name).join(', ')}`);
-    // console.log(`Milestone: ${pullRequest.milestone ? pullRequest.milestone.title : 'None'}`);
-    // console.log(`Description: ${pullRequest.body}`);
+    response.title = pullRequest.title;
+    response.description = pullRequest.body;
+    response.state = pullRequest.state;
+    response.created_at = pullRequest.created_at;
+    response.closed_at = pullRequest.closed_at;
+    response.merged_at = pullRequest.merged_at;
+    response.base_branch = pullRequest.base.ref;
+    response.head_branch = pullRequest.head.ref;
+    response.assignee = pullRequest.assignee ? pullRequest.assignee.login : 'None';
+    response.milestone = pullRequest.milestone ? pullRequest.milestone.title : 'None';
+    response.additions = additions;
+    response.deletions = deletions;
 
-    response.commits = []
+    response.commits = [];
     // Hiển thị các commit của pull request
     for (const commit of commits) {
       const { data: commitDetails } = await octokit.repos.getCommit({
@@ -150,19 +142,65 @@ async function getPullRequestDetails(owner, repo, pullNumber) {
         additions: commitDetails.stats.additions,
         deletions: commitDetails.stats.deletions,
         html_url: commit.html_url,
-      })
-
-      // console.log(`Commit: ${commit.sha}`);
-      // console.log(`Author: ${commit.commit.author.name}`);
-      // console.log(`Added lines: ${commitDetails.stats.additions}`);
-      // console.log(`Removed lines: ${commitDetails.stats.deletions}`);
-      // console.log("-----");
+      });
     }
-    return response
+
+    // Lấy các issue comments của pull request (comments trong phần "Conversation")
+    const { data: issueComments } = await octokit.issues.listComments({
+      owner: owner,
+      repo: repo,
+      issue_number: pullNumber,
+    });
+
+    response.conversations = issueComments.map(comment => ({
+      body: comment.body,
+      author: comment.user.login,
+      created_at: comment.created_at,
+      html_url: comment.html_url,
+    }));
+
+    // Lấy các review comments của pull request (comments trong phần "Files changed")
+    const { data: reviewComments } = await octokit.pulls.listReviewComments({
+      owner: owner,
+      repo: repo,
+      pull_number: pullNumber,
+    });
+
+    response.comments = reviewComments.map(comment => ({
+      id: comment.id,
+      body: comment.body,
+      author: comment.user.login,
+      created_at: comment.created_at,
+      path: comment.path,
+      position: comment.position,
+      html_url: comment.html_url,
+      replies: [],
+    }));
+
+    // Lấy các phản hồi qua lại của các review comments
+    for (const reviewComment of response.comments) {
+      const { data: replies } = await octokit.pulls.listReviewCommentReplies({
+        owner: owner,
+        repo: repo,
+        pull_number: pullNumber,
+        comment_id: reviewComment.id,
+      });
+
+      reviewComment.replies = replies.map(reply => ({
+        body: reply.body,
+        author: reply.user.login,
+        created_at: reply.created_at,
+        path: reply.path,
+        position: reply.position,
+        html_url: reply.html_url,
+      }));
+    }
+
+    return response;
 
   } catch (error) {
     console.error("Error fetching pull request details: ", error);
-    return null
+    return null;
   }
 }
 
