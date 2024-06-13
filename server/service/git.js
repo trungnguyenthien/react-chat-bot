@@ -2,7 +2,8 @@ const { Octokit } = require("@octokit/rest");
 
 // Tạo một instance của Octokit với authentication token
 const octokit = new Octokit({
-  auth: process.env.GITHUB_ACCESS_TOKEN // Thay bằng token của bạn
+  auth: process.env.GITHUB_ACCESS_TOKEN, // Thay bằng token của bạn
+  // baseUrl: "https://your-company-github-enterprise.com/api/v3", // Thay bằng URL của server GitHub riêng của bạn
 });
 
 
@@ -52,6 +53,53 @@ async function getCommitsBetween(owner, repo, startCommit, endCommit) {
 }
 
 
+// Hàm để lấy danh sách pull requests với các filter
+async function listPullRequests(owner, repo, state = 'open', labels = '', milestone = '', per_page = 30, page = 1) {
+  try {
+    const { data: pullRequests } = await octokit.pulls.list({
+      owner: owner,
+      repo: repo,
+      state: state,
+      labels: labels,
+      milestone: milestone,
+      per_page: per_page,
+      page: page,
+    });
+
+    // Tạo array để lưu trữ các thông tin cần thiết của pull requests
+    const pullRequestDetails = pullRequests.map(pr => ({
+      html_url: pr.html_url,
+      number: pr.number,
+      state: pr.state,
+      lock: pr.lock,
+      title: pr.title,
+      user_login: pr.user.login,
+      body: pr.body,
+      label_names: pr.labels.map(label => label.name),
+      milestone: pr.milestone ? {
+        id: pr.milestone.id,
+        number: pr.milestone.number,
+        description: pr.milestone.description,
+        title: pr.milestone.title,
+        state: pr.milestone.state,
+      } : null,
+      created_at: pr.created_at,
+      closed_at: pr.closed_at,
+      merged_at: pr.merged_at,
+      merge_commit_sha: pr.merge_commit_sha,
+      head_ref: pr.head.ref,
+      base_ref: pr.base.ref,
+      assignees: pr.assignees.map(assignee => assignee.login),
+      requested_reviewers: pr.requested_reviewers.map(reviewer => reviewer.login),
+    }));
+
+    return pullRequestDetails;
+  } catch (error) {
+    console.error("Error fetching pull requests: ", error);
+    return null;
+  }
+}
+
 // Hàm để lấy thông tin pull request và danh sách commit
 async function getPullRequestInfo(owner, repo, pullNumber) {
   try {
@@ -62,13 +110,14 @@ async function getPullRequestInfo(owner, repo, pullNumber) {
       pull_number: pullNumber,
     });
 
-    console.log("Pull Request Info:");
-    console.log(`Title: ${pullRequest.title}`);
-    console.log(`User: ${pullRequest.user.login}`);
-    console.log(`State: ${pullRequest.state}`);
-    console.log(`Created at: ${pullRequest.created_at}`);
-    console.log(`Merged at: ${pullRequest.merged_at}`);
-    console.log("-----");
+    // Tạo object để lưu thông tin pull request
+    const pullRequestInfo = {
+      title: pullRequest.title,
+      user: pullRequest.user.login,
+      state: pullRequest.state,
+      created_at: pullRequest.created_at,
+      merged_at: pullRequest.merged_at,
+    };
 
     // Lấy danh sách commit trong pull request
     const { data: commits } = await octokit.pulls.listCommits({
@@ -77,16 +126,22 @@ async function getPullRequestInfo(owner, repo, pullNumber) {
       pull_number: pullNumber,
     });
 
-    console.log("Commits in Pull Request:");
-    commits.forEach(commit => {
-      console.log(`Commit SHA: ${commit.sha}`);
-      console.log(`Author: ${commit.commit.author.name}`);
-      console.log(`Date: ${commit.commit.author.date}`);
-      console.log(`Message: ${commit.commit.message}`);
-      console.log("-----");
-    });
+    // Tạo array để lưu thông tin các commit
+    const commitList = commits.map(commit => ({
+      sha: commit.sha,
+      author: commit.commit.author.name,
+      date: commit.commit.author.date,
+      message: commit.commit.message,
+    }));
+
+    // Trả về object chứa thông tin pull request và danh sách commit
+    return {
+      pullRequestInfo,
+      commitList,
+    };
   } catch (error) {
     console.error("Error fetching pull request info: ", error);
+    return null;
   }
 }
 
@@ -209,5 +264,6 @@ module.exports = {
   getPullRequestInfo,
   getPullRequestDetails,
   getPullRequestComments,
-  getCommitsBetween
+  getCommitsBetween,
+  listPullRequests
 };
