@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ChatInput from '../components/common/ChatInput';
 import '../assets/styles/Chat.css'
 
@@ -18,33 +18,55 @@ async function stream_message(message) {
     const response = await fetch('http://localhost:3001/completion/stream', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain',
       },
-      body: JSON.stringify({ message, clientId: event_guid }),
+      body: JSON.stringify({ message: message, clientId: event_guid })
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    // Kiểm tra xem response có phải là stream không
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      console.log(decoder.decode(value));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Xử lý từng chunk dữ liệu
+        console.log(decoder.decode(value));
+      }
+    } else {
+      const text = await response.text();
+      console.log(text);
     }
   } catch (error) {
     console.error('Error:', error);
   }
 }
 
-let event_guid = undefined
+function gen_message_id(isBot) {
+  // Lấy timestamp hiện tại tính bằng giây
+  const timestamp = Math.floor(Date.now() / 1000);
+  // Xác định prefix dựa trên giá trị của isBot
+  const prefix = isBot ? 'bot_msg_' : 'client_msg_';
+  // Kết hợp prefix và timestamp để tạo id
+  return `${prefix}${timestamp}`;
+}
 
+let event_guid = undefined
+let responding_bot_msg_id = undefined
 function Chat() {
   const [messages, setMessages] = useState([]);
-  
+  const messagesRef = useRef(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     console.log('useEffect')
     const eventSource = new EventSource(`http://localhost:3001/completion/events`);
@@ -53,12 +75,13 @@ function Chat() {
       // console.log(`onmessage ${event}`)
       // console.log(event.data)
       let guid = guid_message(event.data)
-      if(guid) {
+      if (guid) {
         event_guid = `${guid}`
         console.log(event_guid)
         return
       }
       let chunk = event.data
+      append_chunk_to_message(responding_bot_msg_id, chunk)
     };
 
     eventSource.onerror = () => {
@@ -75,19 +98,49 @@ function Chat() {
   const addUserMessage = (message) => {
     stream_message(message)
     console.log(message)
-    
+    let client_msg_id = gen_message_id(false)
+    let bot_response_id = gen_message_id(true)
+    responding_bot_msg_id = bot_response_id
+
     setMessages([{
+      message: "",
+      isMine: false,
+      id: bot_response_id
+    },{
       message: message,
-      isMine: true
+      isMine: true,
+      id: client_msg_id
     }, ...messages]);
   };
 
-  const addBotMessage = (message) => {
-    setMessages([{
-      message: message,
-      isMine: false
-    }, ...messages]);
-  };
+  function append_chunk_to_message(id, chunk) {
+    // Tìm index của message có id tương ứng
+    const index = messagesRef.current.findIndex(msg => msg.id === id);
+    
+    // Nếu tìm thấy message
+    if (index !== -1) {
+      // Tạo một bản sao của array messages
+      const updatedMessages = [...messagesRef.current];
+
+      // Cập nhật message tại index đã tìm thấy
+      updatedMessages[index] = {
+        ...updatedMessages[index],
+        message: updatedMessages[index].message + chunk
+      };
+
+      // Cập nhật state messages với array mới
+      setMessages(updatedMessages);
+    } else {
+      console.warn(`Message with id ${id} not found`);
+    }
+  }
+
+  // const addBotMessage = (message) => {
+  //   setMessages([{
+  //     message: message,
+  //     isMine: false
+  //   }, ...messages]);
+  // };
 
   return (
     <div className="chat-container">
