@@ -17,9 +17,10 @@
 }
 
 .message-mine {
-  color: rgb(85, 0, 0);
-  background-color: #f6f6f6;
+  color: rgb(0, 0, 0);
+  background-color: #eaeaeaaa;
   border-bottom: 1px solid rgb(196, 196, 196);
+  border-top: 1px solid rgb(196, 196, 196);
   padding: 10px;
   margin-bottom: 10px;
 }

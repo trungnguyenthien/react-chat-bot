@@ -1,7 +1,7 @@
 /* Reset some default browser styles */
 .showdowncontainer {
   font-family: Arial, sans-serif;
-  margin: 20px;
+  margin: 0px;
   color: #333;
   line-height: 1.6;
 }
@@ -53,6 +53,8 @@
   font-family: 'Courier New', Courier, monospace;
   background-color: #d7d7d7;
   color: rgb(0, 0, 0);
+  font-size: 14px ;
+  font-weight: bold;
   padding: 2px 5px;
   border-radius: 3px;
 }
@@ -88,7 +90,7 @@
 }
 
 .showdowncontainer th {
-  background-color: #f2f2f2;
+  background-color: #f0f0f0;
 }
 
 .showdowncontainer a {
