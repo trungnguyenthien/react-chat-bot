@@ -6,3 +6,20 @@
   height: 40vmin;
   pointer-events: none;
 }
+
+code {
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #333;
+}
+
+pre code {
+  display: block;
+  padding: 10px;
+  overflow-x: auto;
+  line-height: 1.45;
+  border: 1px solid #ddd;
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ChatInput from '../components/common/ChatInput';
 import '../assets/styles/Chat.css'
+import '../assets/styles/ShowDown.css'
 import { Buffer } from 'buffer';
 
 import showdown from 'showdown';
@@ -173,11 +174,19 @@ function Chat() {
     }
   }
 
+
+
   return (
     <div className="chat-container">
       <div className="messages">
         {messages.map((msg, index) => {
-          let className = msg.isMine ? 'showdowncontainer message-mine' : 'showdowncontainer message-bot';
+          let className = msg.isMine ? 'message-mine' : 'showdowncontainer message-bot';
+          // if(msg.isMine) {
+          //   return (<div 
+          //     id={msg.id} 
+          //     key={index} 
+          //     className={className}>${msg.message}</div>)
+          // }
           return (<div 
             id={msg.id} 
             key={index} 
