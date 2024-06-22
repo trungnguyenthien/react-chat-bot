@@ -177,7 +177,7 @@ function Chat() {
     <div className="chat-container">
       <div className="messages">
         {messages.map((msg, index) => {
-          let className = msg.isMine ? 'markdown message-mine' : 'markdown message-bot';
+          let className = msg.isMine ? 'showdowncontainer message-mine' : 'showdowncontainer message-bot';
           return (<div 
             id={msg.id} 
             key={index} 
