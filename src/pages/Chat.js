@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ChatInput from '../components/common/ChatInput';
 import '../assets/styles/Chat.css'
+import { Buffer } from 'buffer';
+
+import showdown from 'showdown';
+// import showdownTable from 'showdown-table2';
 
 // Nếu message có format <guid>{{ID}} (ví dụ: <guid>8261f47e377143649d5f1dc212d4e5e3)
 // Hãy trả về chuỗi 8261f47e377143649d5f1dc212d4e5e3
@@ -9,6 +13,14 @@ function guid_message(msg) {
   // Sử dụng regular expression để tìm chuỗi có format <guid>{{ID}}
   const match = msg.match(/<guid>([0-9a-fA-F]{32})/);
   return match ? match[1] : null;
+}
+
+function base64ToText(base64) {
+  // Chuyển đổi chuỗi base64 thành Buffer
+  const buffer = Buffer.from(base64, 'base64');
+  
+  // Chuyển đổi Buffer thành text
+  return buffer.toString('utf-8');
 }
 
 // Thực hiện phương thức POST đến `http://localhost:3001/completion/stream`
@@ -59,6 +71,7 @@ function gen_message_id(isBot) {
 
 let event_guid = undefined
 let responding_bot_msg_id = undefined
+let responding_bot_msg_content = ""
 function Chat() {
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef(messages);
@@ -74,14 +87,23 @@ function Chat() {
     eventSource.onmessage = (event) => {
       // console.log(`onmessage ${event}`)
       // console.log(event.data)
-      let guid = guid_message(event.data)
+      const decodeText = base64ToText(event.data)
+      let guid = guid_message(decodeText)
       if (guid) {
         event_guid = `${guid}`
         console.log(event_guid)
         return
       }
-      let chunk = event.data
-      append_chunk_to_message(responding_bot_msg_id, chunk)
+      let chunk = decodeText
+      if(chunk === undefined) {
+        return
+      }
+      if(chunk === `undefined`) {
+        return
+      }
+      console.log(`chunk: ${chunk}`)
+      responding_bot_msg_content += chunk
+      update_message(responding_bot_msg_id, responding_bot_msg_content)
     };
 
     eventSource.onerror = () => {
@@ -101,19 +123,35 @@ function Chat() {
     let client_msg_id = gen_message_id(false)
     let bot_response_id = gen_message_id(true)
     responding_bot_msg_id = bot_response_id
+    responding_bot_msg_content = ""
 
     setMessages([{
       message: "",
       isMine: false,
-      id: bot_response_id
+      id: bot_response_id,
+      html: null
     },{
       message: message,
       isMine: true,
-      id: client_msg_id
+      id: client_msg_id,
+      html: null
     }, ...messages]);
   };
+  // const converter = new showdown.Converter({
+  //   extensions: [showdownTable]
+  // });
+  const converter = new showdown.Converter({
+    tables: true, // Kích hoạt hỗ trợ bảng
+    strikethrough: true, // Tùy chọn: kích hoạt các tính năng khác nếu cần
+    tasklists: true
+  });
 
-  function append_chunk_to_message(id, chunk) {
+  const createMarkup = (markdown) => {
+    return { __html: converter.makeHtml(markdown) };
+  };
+
+  function update_message(id, new_meesage) {
+
     // Tìm index của message có id tương ứng
     const index = messagesRef.current.findIndex(msg => msg.id === id);
     
@@ -125,7 +163,7 @@ function Chat() {
       // Cập nhật message tại index đã tìm thấy
       updatedMessages[index] = {
         ...updatedMessages[index],
-        message: updatedMessages[index].message + chunk
+        message: new_meesage
       };
 
       // Cập nhật state messages với array mới
@@ -135,19 +173,17 @@ function Chat() {
     }
   }
 
-  // const addBotMessage = (message) => {
-  //   setMessages([{
-  //     message: message,
-  //     isMine: false
-  //   }, ...messages]);
-  // };
-
   return (
     <div className="chat-container">
       <div className="messages">
         {messages.map((msg, index) => {
-          let className = msg.isMine ? 'message-mine' : 'message-bot';
-          return (<div key={index} className={className}>{msg.message}</div>)
+          let className = msg.isMine ? 'markdown message-mine' : 'markdown message-bot';
+          return (<div 
+            id={msg.id} 
+            key={index} 
+            className={className}
+            dangerouslySetInnerHTML={createMarkup(msg.message)}
+          />)
         })}
       </div>
       <ChatInput addMessage={addUserMessage} />
