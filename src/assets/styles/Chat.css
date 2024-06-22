@@ -17,20 +17,20 @@
 }
 
 .message-mine {
+  color: rgb(85, 0, 0);
+  background-color: #f6f6f6;
+  border-bottom: 1px solid rgb(196, 196, 196);
   padding: 10px;
-  margin: 5px 0;
-  background-color: #f0f0f0;
-  color: #0400ff;
-  /* border: 1px solid #ddd; */
-  border-radius: 5px;
+  margin-bottom: 10px;
 }
-/* 
+
 .message-bot {
+  color: black;
+  background-color: #ffffff;
+  border-bottom: 1px solid rgb(196, 196, 196);
   padding: 10px;
-  margin: 5px 0;
-  background-color: #e7e7e7;
-  border-radius: 5px;
-} */
+  margin-bottom: 10px;
+}
 
 .chat-input {
   display: flex;

@@ -51,8 +51,8 @@
 
 .showdowncontainer code {
   font-family: 'Courier New', Courier, monospace;
-  background-color: #a6a6a6;
-  color: rgb(57, 0, 0);
+  background-color: #d7d7d7;
+  color: rgb(0, 0, 0);
   padding: 2px 5px;
   border-radius: 3px;
 }
