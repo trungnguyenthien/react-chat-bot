@@ -40,7 +40,9 @@ function ChatInput({ addMessage }) {
           placeholder="Type a message..."
           rows={1}
         />
-        <button type="submit">Send</button>
+        <button type="submit">
+          <i class="bi bi-send"></i>
+        </button>
       </div>
     </form>
   );
