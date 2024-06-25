@@ -7,6 +7,8 @@ import { Buffer } from 'buffer';
 import showdown from 'showdown';
 // import showdownTable from 'showdown-table2';
 
+const CHAT_ENPOINT = process.env.REACT_APP_CHAT_ENDPOINT
+
 // Nếu message có format <guid>{{ID}} (ví dụ: <guid>8261f47e377143649d5f1dc212d4e5e3)
 // Hãy trả về chuỗi 8261f47e377143649d5f1dc212d4e5e3
 // Nếu không phải thì trả về null
@@ -28,7 +30,7 @@ function base64ToText(base64) {
 // raw body của phương thức POST là nội dung `message`
 async function stream_message(message) {
   try {
-    const response = await fetch('http://localhost:3001/completion/stream', {
+    const response = await fetch(`${CHAT_ENPOINT}/completion/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',
@@ -83,7 +85,7 @@ function Chat() {
 
   useEffect(() => {
     console.log('useEffect')
-    const eventSource = new EventSource(`http://localhost:3001/completion/events`);
+    const eventSource = new EventSource(`${CHAT_ENPOINT}/completion/events`);
 
     eventSource.onmessage = (event) => {
       // console.log(`onmessage ${event}`)
