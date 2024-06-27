@@ -28,7 +28,7 @@ function base64ToText(base64) {
 
 // Thực hiện phương thức POST đến `http://localhost:3001/completion/stream`
 // raw body của phương thức POST là nội dung `message`
-async function stream_message(message) {
+async function stream_message(message, event_guid) {
   try {
     const response = await fetch(`${CHAT_ENPOINT}/completion/stream`, {
       method: 'POST',
@@ -72,7 +72,6 @@ function gen_message_id(isBot) {
   return `${prefix}${timestamp}`;
 }
 
-let event_guid = undefined
 let responding_bot_msg_id = undefined
 let responding_bot_msg_content = ""
 function Chat() {
@@ -83,27 +82,29 @@ function Chat() {
     messagesRef.current = messages;
   }, [messages]);
 
-  useEffect(() => {
-    console.log('useEffect')
-    const eventSource = new EventSource(`${CHAT_ENPOINT}/completion/events`);
+  let eventSource = null
+  async function connectAndSend(message) {
+    if(eventSource) {
+      eventSource.close()
+    }
+    
+    eventSource = new EventSource(`${CHAT_ENPOINT}/completion/events`);
 
     eventSource.onmessage = (event) => {
-      // console.log(`onmessage ${event}`)
-      // console.log(event.data)
       const decodeText = base64ToText(event.data)
       let guid = guid_message(decodeText)
       if (guid) {
-        event_guid = `${guid}`
+        const event_guid = `${guid}`
         console.log(event_guid)
+        stream_message(message, event_guid)
         return
       }
       let chunk = decodeText
-      if(chunk === undefined) {
+
+      if(chunk === undefined || chunk === `undefined`) {
         return
       }
-      if(chunk === `undefined`) {
-        return
-      }
+
       console.log(`chunk: ${chunk}`)
       responding_bot_msg_content += chunk
       update_message(responding_bot_msg_id, responding_bot_msg_content)
@@ -113,16 +114,10 @@ function Chat() {
       console.error('EventSource failed.');
       eventSource.close();
     };
-
-    return () => {
-      eventSource.close();
-    };
-  }, []);
+  }
 
 
   const addUserMessage = (message) => {
-    stream_message(message)
-    console.log(message)
     let client_msg_id = gen_message_id(false)
     let bot_response_id = gen_message_id(true)
     responding_bot_msg_id = bot_response_id
@@ -139,13 +134,13 @@ function Chat() {
       id: client_msg_id,
       html: null
     }, ...messages]);
+
+    connectAndSend(message)
   };
-  // const converter = new showdown.Converter({
-  //   extensions: [showdownTable]
-  // });
+  
   const converter = new showdown.Converter({
-    tables: true, // Kích hoạt hỗ trợ bảng
-    strikethrough: true, // Tùy chọn: kích hoạt các tính năng khác nếu cần
+    tables: true,
+    strikethrough: true, 
     tasklists: true
   });
 
